@@ -1,11 +1,11 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { Text } from 'react-native-paper';
-
-
+import React from "react";
+import { colors } from "../../constants/colors";
+import { Image, Text, View } from "react-native";
 
 export default function AdministrationPanel() {
-    return (
-            <Text>Administration Panel</Text>
-    );
+  return (
+    <View>
+      <Text>Welcome to the Administration Panel</Text>
+    </View>
+  );
 }
