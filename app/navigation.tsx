@@ -36,7 +36,6 @@ export default function Navigation() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LogIn} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
-        <Stack.Screen name="Voting" component={Voting} />
       </Stack.Navigator>
     </NavigationContainer>
   );

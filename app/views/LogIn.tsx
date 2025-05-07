@@ -1,9 +1,8 @@
 import React from "react";
-import { View, StyleSheet, Image } from "react-native";
-import { Text, TextInput, Button, useTheme } from "react-native-paper";
+import { View, Text, StyleSheet, Image } from "react-native";
+import { TextInput, Button, useTheme } from "react-native-paper";
 import { colors } from "../../constants/colors";
 import { useNavigation } from "@react-navigation/native";
-import VotingPanel from "./VotingPanel";
 
 const credentials = [
   { username: "admin", password: "admin" },
@@ -31,9 +30,7 @@ export default function LogIn() {
 
   return (
     <View style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>
-        Bienvenido
-      </Text>
+      <Text style={styles.title}>Bienvenido</Text>
       <Image
         source={require("../../assets/voting_login.png")}
         style={styles.image}
