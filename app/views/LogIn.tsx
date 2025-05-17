@@ -1,16 +1,28 @@
-import React from "react";
+import React, { useContext  } from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { TextInput, Button, useTheme } from "react-native-paper";
 import { colors } from "../../constants/colors";
 import { useNavigation } from "@react-navigation/native";
+import { UserContext } from "../asyncData/InventarioContext";
+import { Alert } from "react-native";
 
-const credentials = [
-  { username: "admin", password: "admin" },
-  { username: "user1", password: "password1" },
-  { username: "user2", password: "password2" },
-];
 
 export default function LogIn() {
+  const initialAdminUser = {
+    id: 'admin',
+    userName: 'admin',
+    password: 'admin',
+    voted: false,
+    vote: ["admin"],
+  };
+  const { user = [], setUser } = useContext(UserContext);
+  React.useEffect(() => {
+    if (!user || user.length === 0) {
+      setUser(
+        (prev: any[] = []) => [...prev, initialAdminUser]
+      );
+    } 
+  }, []);
   const theme = useTheme();
   const navigation = useNavigation();
 
@@ -18,13 +30,16 @@ export default function LogIn() {
   const [password, setPassword] = React.useState("");
 
   const handleLogin = () => {
-    const user = credentials.find((cred) => cred.username == username);
-    if (user && user.password == password) {
+    const foundUser = user.find((cred) => cred.userName == username);
+    if (foundUser && foundUser.password == password) {
       console.log("Login successful");
-      // Navigate to the VotingPanel screen
       navigation.navigate("MainTabs" as never);
     } else {
       console.log("Login failed");
+      console.log(user);
+
+        Alert.alert("Error", "Usuario o contraseña no válidos");
+
     }
   };
 
@@ -53,9 +68,7 @@ export default function LogIn() {
       />
       <Button
         mode="contained"
-        onPress={() => {
-          handleLogin();
-        }}
+        onPress={handleLogin}
         style={styles.button}
         contentStyle={{ paddingVertical: 8 }}
       >

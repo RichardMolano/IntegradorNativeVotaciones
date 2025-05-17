@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import { colors } from "../../constants/colors";
 import { FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { Button, Card, useTheme } from "react-native-paper";
@@ -6,6 +6,7 @@ import { TabActions, useNavigation } from "@react-navigation/native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native";
+import { UserContext } from "../asyncData/InventarioContext";
 
 const candidates = [
   {
@@ -29,6 +30,7 @@ const candidates = [
 ];
 
 export default function VotingPanel() {
+  const { user, setUser } = useContext(UserContext);
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const navigation = useNavigation();
@@ -36,7 +38,7 @@ export default function VotingPanel() {
 
   const handleVote = (id: string) => {
     setSelectedId(id);
-    console.log(`Seleccionaste a ${candidates.find((c) => c.id === id)?.name}`);
+    
   };
 
   return (
