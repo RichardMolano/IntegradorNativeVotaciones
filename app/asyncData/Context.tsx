@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useState, useEffect, ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type User = {
   id: string;
@@ -7,13 +7,13 @@ type User = {
   password: string;
   voted: boolean;
   vote: [string];
+  rol: string;
 };
 
 type UserContextType = {
   user: User[];
   setUser: React.Dispatch<React.SetStateAction<User[]>>;
 };
-
 
 export const UserContext = createContext<UserContextType>({
   user: [],
@@ -22,7 +22,7 @@ export const UserContext = createContext<UserContextType>({
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User[]>([]);
-  const STORAGE_KEY = 'user_guardados';
+  const STORAGE_KEY = "user_guardados";
 
   useEffect(() => {
     const cargar = async () => {

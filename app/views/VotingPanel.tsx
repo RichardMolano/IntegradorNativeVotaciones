@@ -6,7 +6,7 @@ import { TabActions, useNavigation } from "@react-navigation/native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native";
-import { UserContext } from "../asyncData/InventarioContext";
+import { UserContext } from "../asyncData/Context";
 
 const candidates = [
   {
@@ -38,7 +38,6 @@ export default function VotingPanel() {
 
   const handleVote = (id: string) => {
     setSelectedId(id);
-    
   };
 
   return (

@@ -1,27 +1,25 @@
-import React, { useContext  } from "react";
+import React, { useContext } from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { TextInput, Button, useTheme } from "react-native-paper";
 import { colors } from "../../constants/colors";
 import { useNavigation } from "@react-navigation/native";
-import { UserContext } from "../asyncData/InventarioContext";
+import { UserContext } from "../asyncData/Context";
 import { Alert } from "react-native";
-
 
 export default function LogIn() {
   const initialAdminUser = {
-    id: 'admin',
-    userName: 'admin',
-    password: 'admin',
+    id: "admin",
+    userName: "admin",
+    password: "admin",
     voted: false,
     vote: ["admin"],
+    rol: "admin",
   };
   const { user = [], setUser } = useContext(UserContext);
   React.useEffect(() => {
     if (!user || user.length === 0) {
-      setUser(
-        (prev: any[] = []) => [...prev, initialAdminUser]
-      );
-    } 
+      setUser((prev: any[] = []) => [...prev, initialAdminUser]);
+    }
   }, []);
   const theme = useTheme();
   const navigation = useNavigation();
@@ -38,8 +36,7 @@ export default function LogIn() {
       console.log("Login failed");
       console.log(user);
 
-        Alert.alert("Error", "Usuario o contraseña no válidos");
-
+      Alert.alert("Error", "Usuario o contraseña no válidos");
     }
   };
 
@@ -90,6 +87,7 @@ const styles = StyleSheet.create({
     color: colors.text || "#fff",
     marginBottom: 20,
     fontWeight: "bold",
+    fontSize: 24,
   },
   image: {
     width: 180,
@@ -97,12 +95,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   input: {
-    width: "100%",
+    width: "90%",
+    maxWidth: 400,
+    alignSelf: "center",
     marginBottom: 15,
   },
   button: {
-    width: "100%",
+    width: "90%",
+    maxWidth: 400,
     borderRadius: 8,
     marginTop: 10,
+    alignSelf: "center",
   },
 });

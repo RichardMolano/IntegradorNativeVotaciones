@@ -2,7 +2,7 @@ import { PaperProvider } from "react-native-paper";
 import AppNavigation from "./app/navigation";
 import { customTheme } from "./app/theme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { UserProvider } from "./app/asyncData/InventarioContext";
+import { UserProvider } from "./app/asyncData/Context";
 
 export default function App() {
   return (
@@ -12,6 +12,6 @@ export default function App() {
           <AppNavigation />
         </PaperProvider>
       </SafeAreaProvider>
-    </UserProvider> 
+    </UserProvider>
   );
 }
