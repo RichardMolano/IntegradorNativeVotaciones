@@ -1,4 +1,4 @@
-import { Student } from '../studient/studient';
+import { Student } from '../student/student';
 import { Elections } from './../elections/elections';
 export class Candidates {
 

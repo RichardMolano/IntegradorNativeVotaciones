@@ -1,5 +1,4 @@
-
-import { Student } from "../studient/studient";
+import { Student } from '../student/student';
 import { Candidates } from "../candidates/candidates";
 import { Votes } from "../vote/vote";
 import { Role } from "../role/role";

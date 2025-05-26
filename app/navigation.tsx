@@ -11,6 +11,7 @@ import CandidatePanel from "./views/CandidatePanel";
 
 import { SeguridadContext } from "./asyncData/Context";
 import AdministrativePanel from "./views/AdministrativePanel";
+import ElectionView from "./views/electionView";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -22,6 +23,7 @@ function MainTabs() {
       <Tab.Screen name="Candidatos" component={CandidatePanel} />
       <Tab.Screen name="Administración" component={AdministrationPanel} />
       <Tab.Screen name="Panel Admin" component={AdministrativePanel} />
+      <Tab.Screen name="Panel Elecciones" component={ElectionView} />
     </Tab.Navigator>
   );
 }
