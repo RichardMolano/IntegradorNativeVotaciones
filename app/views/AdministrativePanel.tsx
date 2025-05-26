@@ -2,78 +2,97 @@ import React, { useContext } from "react";
 import { View, StyleSheet, useWindowDimensions, FlatList } from "react-native";
 import { Text, Button, Card, TextInput } from "react-native-paper";
 import { colors } from "../../constants/colors";
-import { UserContext } from "../asyncData/Context";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomSheetDropdown } from "./hooks/Drop";
-
-const admin = {
-  name: "Juan Pérez",
-  role: "Administrador General",
-};
+import { SeguridadContext } from "../asyncData/Context";
+import { UserController } from "../controllers/private/userController";
+import { User } from "../models/user/user";
+import { Role } from "../models/role/role";
+import { RoleController } from "../controllers/private/rolControlle";
 
 export default function AdministrativePanel() {
   const insets = useSafeAreaInsets();
-  const { user, setUser } = useContext(UserContext);
+  const userController = new UserController();
+  const roleController = new RoleController();
+
+  const { sesion, token } = useContext(SeguridadContext);
   const [showCreate, setShowCreate] = React.useState(false);
   const [showSelectRol, setShowSelectRol] = React.useState(false);
-  const [newUser, setNewUser] = React.useState({
-    id: "",
-    userName: "",
+  const [newUser, setNewUser] = React.useState<User>({
+    id: 0,
     password: "",
-    voted: false,
-    vote: [""],
-    rol: "",
+    document: "",
+    email: "",
+    name: "",
+    id_role: 0,
+    roleUser: new Role(0, ""),
   });
+  /* Fields */
+  const [document, setDocument] = React.useState("");
+  const [email, setEmail] = React.useState("");
+
   const [userEdit, setUserEdit] = React.useState(false);
+  // State to manage the list of users
+  const [roles, setRoles] = React.useState<Role[]>([]);
+  const [users, setUsers] = React.useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    userController.getAllUsers().then((data) => {
+      if (mounted) {
+        setUsers(data);
+        setLoadingUsers(false);
+      }
+    });
+
+    roleController.getAllRoles().then((data) => {
+      if (mounted) {
+        setRoles(data);
+      }
+    });
+  }, []);
 
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 600;
 
   const styles = getStyles(isSmallScreen, insets);
 
-  const handleCreateUser = () => {
-    if (!newUser.userName || !newUser.password) return;
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.password || !newUser.roleUser) return;
 
-    if (userEdit && newUser.id) {
-      setUser((prev: any) =>
-        prev.map((u: any) =>
-          u.id === newUser.id
-            ? {
-                ...u,
-                userName: newUser.userName,
-                password: newUser.password,
-                rol: newUser.rol,
-              }
-            : u
-        )
-      );
-      setUserEdit(false);
-    } else {
-      let newId: string;
-      do {
-        newId = Math.random().toString(36).substring(2, 11);
-      } while ((user || []).some((u: any) => u.id === newId));
-      setUser([
-        ...(user || []),
-        {
+    try {
+      if (userEdit && newUser.id) {
+        // Editar usuario existente
+        const updatedUser = await userController.updateUser({
           ...newUser,
-          id: newId,
-          voted: false,
-          vote: [""],
-          rol: "",
-        },
-      ]);
+        } as User);
+        setUsers((prev: any) =>
+          prev.map((u: any) => (u.id === updatedUser.id ? updatedUser : u))
+        );
+        setUserEdit(false);
+      } else {
+        // Crear nuevo usuario
+        const createdUser = await userController.createUser({
+          ...newUser,
+        } as User);
+        setUsers((prev: any) => [...prev, createdUser]);
+      }
+      setNewUser({
+        id: 0,
+        name: "",
+        password: "",
+        document: "",
+        email: "",
+        id_role: 0,
+        roleUser: new Role(0, ""),
+      });
+      setShowCreate(false);
+    } catch (error) {
+      // Manejo de error opcional
+      console.error("Error al crear/editar usuario:", error);
     }
-
-    setNewUser({
-      id: "",
-      userName: "",
-      password: "",
-      voted: false,
-      vote: [""],
-      rol: "",
-    });
-    setShowCreate(false);
   };
 
   return (
@@ -82,8 +101,18 @@ export default function AdministrativePanel() {
       <View style={styles.profileContainer}>
         <Text style={styles.title}>Perfil del Administrador</Text>
         <Card style={styles.card}>
-          <Text style={styles.name}>{admin.name}</Text>
-          <Text style={styles.role}>{admin.role}</Text>
+          <Text style={styles.name}>{sesion.email}</Text>
+          <Text style={styles.role}>{sesion.roleUser.name}</Text>
+
+          <Card.Content>
+            <Text style={{ color: "#ccc" }}>
+              {loadingUsers
+                ? "Cargando usuarios..."
+                : users && users.length > 0
+                ? `Usuarios registrados: ${users.length}`
+                : "No hay usuarios registrados."}
+            </Text>
+          </Card.Content>
         </Card>
         <Button
           mode={showCreate ? "outlined" : "contained"}
@@ -108,9 +137,9 @@ export default function AdministrativePanel() {
                 mode="outlined"
                 style={styles.input}
                 placeholder="Usuario"
-                value={newUser.userName}
+                value={newUser.name}
                 onChangeText={(text) =>
-                  setNewUser((prev) => ({ ...prev, userName: text }))
+                  setNewUser((prev) => ({ ...prev, name: text }))
                 }
                 theme={{
                   colors: {
@@ -120,6 +149,45 @@ export default function AdministrativePanel() {
                   },
                 }}
               />
+              <Text style={{ color: "#fff", marginBottom: 8 }}>
+                Documento de identidad
+              </Text>
+              <TextInput
+                label="Documento"
+                mode="outlined"
+                style={styles.input}
+                placeholder="Documento"
+                value={newUser.document}
+                onChangeText={(text) =>
+                  setNewUser((prev) => ({ ...prev, document: text }))
+                }
+                theme={{
+                  colors: {
+                    text: "#fff",
+                    primary: "#fff",
+                    placeholder: "#ccc",
+                  },
+                }}
+              />
+              <Text style={{ color: "#fff", marginBottom: 8 }}>Email</Text>
+              <TextInput
+                label="Email"
+                mode="outlined"
+                style={styles.input}
+                placeholder="Email"
+                value={newUser.email}
+                onChangeText={(text) =>
+                  setNewUser((prev) => ({ ...prev, email: text }))
+                }
+                theme={{
+                  colors: {
+                    text: "#fff",
+                    primary: "#fff",
+                    placeholder: "#ccc",
+                  },
+                }}
+              />
+
               <Text style={{ color: "#fff", marginBottom: 8 }}>Contraseña</Text>
               <TextInput
                 label="Contraseña"
@@ -139,11 +207,13 @@ export default function AdministrativePanel() {
                   },
                 }}
               />
-              {newUser.rol ? (
+              {newUser.roleUser.name !== "" ? (
                 <View style={styles.rolRow}>
                   <Text style={{ color: "#fff", marginRight: 8 }}>Rol:</Text>
                   <View style={styles.rolBadge}>
-                    <Text style={{ color: "#000" }}>{newUser.rol}</Text>
+                    <Text style={{ color: "#000" }}>
+                      {newUser.roleUser.name}
+                    </Text>
                   </View>
                   <View />
                 </View>
@@ -173,7 +243,9 @@ export default function AdministrativePanel() {
                     labelStyle={{ fontSize: 18, color: "#fff" }}
                     onPress={() => setShowSelectRol(true)}
                   >
-                    {newUser.rol ? newUser.rol : "Seleccionar rol"}
+                    {newUser.roleUser.name !== ""
+                      ? newUser.roleUser.name
+                      : "Seleccionar rol"}
                   </Button>
                 </View>
               )}
@@ -181,9 +253,13 @@ export default function AdministrativePanel() {
                 visible={showSelectRol}
                 onDismiss={() => setShowSelectRol(false)}
                 onSelect={(value) =>
-                  setNewUser((prev) => ({ ...prev, rol: String(value) }))
+                  setNewUser((prev) => ({
+                    ...prev,
+                    roleUser: new Role(value.id, String(value.name)),
+                    id_role: value.id,
+                  }))
                 }
-                listValue={["Administrador", "Votante"]}
+                listValue={roles.map((r) => ({ id: r.id, name: r.name }))}
               />
               <View style={styles.actionRow}>
                 <Button
@@ -191,12 +267,13 @@ export default function AdministrativePanel() {
                   style={{ flex: 1, marginRight: 8 }}
                   onPress={() =>
                     setNewUser({
-                      id: "",
-                      userName: "",
+                      id: 0,
+                      name: "",
                       password: "",
-                      voted: false,
-                      vote: [""],
-                      rol: "",
+                      document: "",
+                      email: "",
+                      id_role: 0,
+                      roleUser: new Role(0, ""),
                     })
                   }
                 >
@@ -219,17 +296,19 @@ export default function AdministrativePanel() {
             titleStyle={{ color: "#fff" }}
           />
           <Card.Content>
-            {user && user.length > 0 ? (
+            {users && users.length > 0 ? (
               <FlatList
-                data={user}
-                keyExtractor={(u: any) => u.id || u.userName}
-                renderItem={({ item: u }: any) => (
+                data={users}
+                keyExtractor={(u: User) => {
+                  return u.id.toString();
+                }}
+                renderItem={({ item: u }) => (
                   <View style={styles.userRow}>
                     <View style={{ flex: 1, minWidth: 120 }}>
                       <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                        {u.userName}
+                        {u.name}
                       </Text>
-                      <Text style={{ color: "#ccc" }}>{u.password}</Text>
+                      <Text style={{ color: "#ccc" }}>{u.email}</Text>
                     </View>
                     <View style={styles.userActions}>
                       <Button
@@ -239,10 +318,7 @@ export default function AdministrativePanel() {
                         onPress={() => {
                           setShowCreate(true);
                           setUserEdit(true);
-                          setNewUser({
-                            ...u,
-                            password: u.password,
-                          });
+                          setNewUser(u);
                         }}
                       >
                         Editar
@@ -253,9 +329,11 @@ export default function AdministrativePanel() {
                         buttonColor="#b00020"
                         textColor="#fff"
                         onPress={() => {
-                          setUser((prev: any) =>
-                            prev.filter((item: any) => item.id !== u.id)
-                          );
+                          userController.deleteUser(u.id).then(() => {
+                            setUsers((prev: any) =>
+                              prev.filter((user: any) => user.id !== u.id)
+                            );
+                          });
                         }}
                       >
                         Borrar

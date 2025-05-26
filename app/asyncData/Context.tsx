@@ -1,44 +1,125 @@
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { jwtDecode } from "jwt-decode";
+import { User } from "../models/user/user";
+import { Role } from "../models/role/role";
 
-type User = {
-  id: string;
-  userName: string;
-  password: string;
-  voted: boolean;
-  vote: [string];
-  rol: string;
+export type DatoSesion = User;
+
+type SeguridadContextType = {
+  sesion: DatoSesion;
+  token: string;
+  verificarSesion: () => Promise<boolean>;
+  cerrarSesion: () => Promise<void>;
+  guardarToken: (token: string) => Promise<void>;
+  isAuthenticated: boolean;
 };
 
-type UserContextType = {
-  user: User[];
-  setUser: React.Dispatch<React.SetStateAction<User[]>>;
-};
+const inicializarSesion = (): DatoSesion =>
+  ({
+    id: 0,
+    name: "",
+    email: "",
+    document: "",
+    password: "",
+    roleUser: new Role(0, ""),
+  } as DatoSesion);
 
-export const UserContext = createContext<UserContextType>({
-  user: [],
-  setUser: () => {},
+export const SeguridadContext = createContext<SeguridadContextType>({
+  sesion: inicializarSesion(),
+  token: "",
+  guardarToken: async () => {},
+  cerrarSesion: async () => {},
+  verificarSesion: async () => false,
+  isAuthenticated: false,
 });
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User[]>([]);
-  const STORAGE_KEY = "user_guardados";
+export const SeguridadProvider = ({ children }: { children: ReactNode }) => {
+  const [sesion, setSesion] = useState<DatoSesion>(inicializarSesion);
+  const [token, setToken] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  const STORAGE_KEY = "TOKEN";
 
   useEffect(() => {
     const cargar = async () => {
-      const json = await AsyncStorage.getItem(STORAGE_KEY);
-      if (json) setUser(JSON.parse(json));
+      const tokenGuardado = await AsyncStorage.getItem(STORAGE_KEY);
+      if (tokenGuardado) {
+        await guardarToken(tokenGuardado);
+        setIsAuthenticated(true);
+      }
     };
     cargar();
   }, []);
 
-  useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-  }, [user]);
+  const guardarToken = async (nuevoToken: string) => {
+    try {
+      const decoded: any = jwtDecode(nuevoToken);
+      const nuevaSesion: DatoSesion = {
+        id: decoded.id,
+        name: decoded.name,
+        email: decoded.email,
+        document: "",
+        password: "",
+        id_role: decoded.id_role,
+        roleUser: new Role(decoded.role.id, decoded.role.name),
+      };
+      setToken(nuevoToken);
+      setSesion(nuevaSesion);
+      setIsAuthenticated(true);
+      await AsyncStorage.setItem(STORAGE_KEY, nuevoToken);
+    } catch (error) {
+      console.error("Token inválido:", error);
+      setIsAuthenticated(false);
+    }
+  };
+
+  const cerrarSesion = async () => {
+    setToken("");
+    setSesion(inicializarSesion());
+    setIsAuthenticated(false);
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  };
+
+  const verificarSesion = async (): Promise<boolean> => {
+    const tokenGuardado = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!tokenGuardado) {
+      setIsAuthenticated(false);
+      return false;
+    }
+    try {
+      const decoded: any = jwtDecode(tokenGuardado);
+      const nuevaSesion: DatoSesion = {
+        id: decoded.id,
+        name: decoded.name,
+        email: decoded.email,
+        document: "",
+        password: "",
+        id_role: decoded.id_role,
+        roleUser: new Role(decoded.role.id, decoded.role.name),
+      };
+      setToken(tokenGuardado);
+      setSesion(nuevaSesion);
+      setIsAuthenticated(true);
+      return true;
+    } catch {
+      setIsAuthenticated(false);
+      return false;
+    }
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <SeguridadContext.Provider
+      value={{
+        sesion,
+        token,
+        guardarToken,
+        cerrarSesion,
+        verificarSesion,
+        isAuthenticated,
+      }}
+    >
       {children}
-    </UserContext.Provider>
+    </SeguridadContext.Provider>
   );
 };

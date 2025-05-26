@@ -3,40 +3,51 @@ import { View, Text, StyleSheet, Image } from "react-native";
 import { TextInput, Button, useTheme } from "react-native-paper";
 import { colors } from "../../constants/colors";
 import { useNavigation } from "@react-navigation/native";
-import { UserContext } from "../asyncData/Context";
 import { Alert } from "react-native";
+import { sigIn } from "../service/api/api";
+import { User } from "../models/user/user";
+import { Role } from "../models/role/role";
+import { SeguridadContext } from "../asyncData/Context";
 
 export default function LogIn() {
-  const initialAdminUser = {
-    id: "admin",
-    userName: "admin",
-    password: "admin",
-    voted: false,
-    vote: ["admin"],
-    rol: "admin",
-  };
-  const { user = [], setUser } = useContext(UserContext);
-  React.useEffect(() => {
-    if (!user || user.length === 0) {
-      setUser((prev: any[] = []) => [...prev, initialAdminUser]);
-    }
-  }, []);
+  const { guardarToken } = useContext(SeguridadContext);
+
   const theme = useTheme();
   const navigation = useNavigation();
 
-  const [username, setUsername] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
 
-  const handleLogin = () => {
-    const foundUser = user.find((cred) => cred.userName == username);
-    if (foundUser && foundUser.password == password) {
-      console.log("Login successful");
-      navigation.navigate("MainTabs" as never);
-    } else {
-      console.log("Login failed");
-      console.log(user);
+  const handleLogin = async () => {
+    if (email === "" || password === "") {
+      Alert.alert("Error", "Por favor, ingrese usuario y contraseña");
+      return;
+    }
+    try {
+      const userPayload = new User(
+        0,
+        "",
+        "",
+        email,
+        password,
+        0,
+        new Role(0, "")
+      );
+      const result = await sigIn(userPayload);
+      console.log("Respuesta API login:", result);
+      const token = result?.response?.tokenApp;
+      console.log("Token recibido:", token);
 
+      if (typeof token === "string") {
+        await guardarToken(token);
+        navigation.navigate("MainTabs" as never);
+      } else {
+        Alert.alert("Error", "Usuario o contraseña no válidos");
+        console.warn("Token inválido recibido:", result);
+      }
+    } catch (error) {
       Alert.alert("Error", "Usuario o contraseña no válidos");
+      console.error(error);
     }
   };
 
@@ -53,7 +64,7 @@ export default function LogIn() {
         mode="outlined"
         style={styles.input}
         left={<TextInput.Icon icon="account" />}
-        onChangeText={(text) => setUsername(text)}
+        onChangeText={(text) => setEmail(text)}
       />
       <TextInput
         label="Contraseña"

@@ -1,13 +1,16 @@
 // app/navigation.tsx
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+
 import LogIn from "./views/LogIn";
 import VotingPanel from "./views/VotingPanel";
 import AdministrationPanel from "./views/AdministrationPanel";
-import AdministrativePanel from "./views/AdministrativePanel";
 import CandidatePanel from "./views/CandidatePanel";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+
+import { SeguridadContext } from "./asyncData/Context";
+import AdministrativePanel from "./views/AdministrativePanel";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -22,20 +25,49 @@ function MainTabs() {
     </Tab.Navigator>
   );
 }
-function Voting() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Votación" component={VotingPanel} />
-    </Stack.Navigator>
-  );
-}
 
 export default function Navigation() {
+  const { isAuthenticated, verificarSesion } = useContext(SeguridadContext);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      await verificarSesion();
+      setCheckingSession(false);
+    };
+    checkSession();
+  }, []);
+
+  if (checkingSession) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          display: "flex",
+          backgroundColor: "#fff",
+        }}
+      >
+        <img
+          src={require("../assets/voting_login.png")}
+          alt="App Icon"
+          style={{ width: 80, height: 80, marginBottom: 20 }}
+        />
+        <span style={{ fontSize: 18, color: "#333" }}>Cargando...</span>
+      </div>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Login" component={LogIn} />
-        <Stack.Screen name="MainTabs" component={MainTabs} />
+        {!isAuthenticated ? (
+          <Stack.Screen name="Login" component={LogIn} />
+        ) : (
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

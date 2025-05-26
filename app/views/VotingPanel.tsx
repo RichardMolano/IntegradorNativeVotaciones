@@ -6,7 +6,7 @@ import { TabActions, useNavigation } from "@react-navigation/native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native";
-import { UserContext } from "../asyncData/Context";
+import { SeguridadContext } from "../asyncData/Context";
 
 const candidates = [
   {
@@ -30,7 +30,7 @@ const candidates = [
 ];
 
 export default function VotingPanel() {
-  const { user, setUser } = useContext(UserContext);
+  const { cerrarSesion } = useContext(SeguridadContext);
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const navigation = useNavigation();
@@ -88,7 +88,7 @@ export default function VotingPanel() {
 
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate("Login" as never)}
+          onPress={() => cerrarSesion()}
           style={styles.logoutButton}
         >
           Cerrar sesión

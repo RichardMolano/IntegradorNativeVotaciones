@@ -12,8 +12,8 @@ export function BottomSheetDropdown({
 }: {
   visible: boolean;
   onDismiss: () => void;
-  onSelect: (value: string) => void;
-  listValue: string[];
+  onSelect: (value: { id: number; name: string }) => void;
+  listValue: { id: number; name: string }[];
 }) {
   return (
     <Portal>
@@ -28,14 +28,14 @@ export function BottomSheetDropdown({
         <View style={styles.divider} />
         {listValue.map((value) => (
           <TouchableOpacity
-            key={value}
+            key={value.id}
             onPress={() => {
               onSelect(value);
               onDismiss();
             }}
             style={styles.option}
           >
-            <Text style={styles.optionText}>{value}</Text>
+            <Text style={styles.optionText}>{value.name}</Text>
           </TouchableOpacity>
         ))}
       </Modal>
