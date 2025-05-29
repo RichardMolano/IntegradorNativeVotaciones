@@ -5,18 +5,32 @@ import { User } from "../user/user";
 export class Votes {
 
     public id_vote: number;
-    public candidate: Candidates;
-    public user: User;
-    public election: Elections;
-    public date: Date;
-    public state: boolean;
+    public candidate?: Candidates;
+    public user?: User;
+    public election?: Elections;
+    public date?: Date;
+    public state?: boolean;
 
-    constructor(id_vote: number, candidate: Candidates, user: User, election: Elections, date: Date, state: boolean) {
+    constructor(id_vote: number, candidate?: Candidates, user?: User, election?: Elections, date?: Date, state?: boolean) {
         this.id_vote = id_vote;
         this.candidate = candidate;
         this.user = user;
         this.election = election;
         this.date = date;
         this.state = state;
+    }
+
+    static fromJSON(json: any): Votes {
+        return new Votes(
+            json.id_vote,
+            Candidates.fromJSON(json.candidate),
+            User.fromJSON(json.user),
+            Elections.fromJSON(json.election),
+            new Date(json.date),
+            json.state
+        );
+    }
+    static fromJSONlist(jsonList: any[]): Votes[] {
+        return jsonList.map(json => Votes.fromJSON(json));
     }
 }

@@ -40,10 +40,7 @@ export default function LogIn() {
 
       if (typeof token === "string") {
         await guardarToken(token);
-        navigation.navigate("MainTabs" as never);
-      } else {
-        Alert.alert("Error", "Usuario o contraseña no válidos");
-        console.warn("Token inválido recibido:", result);
+        navigation.navigate("Votación" as never);
       }
     } catch (error) {
       Alert.alert("Error", "Usuario o contraseña no válidos");

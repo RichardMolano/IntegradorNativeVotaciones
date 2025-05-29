@@ -9,4 +9,15 @@ export class Faculty {
         this.id = id;
         this.name = name;
     }
+
+    static fromJSON(json: any): Faculty {
+        return new Faculty(
+            json.id,
+            json.name
+        );
+    }
+
+    static fromJSONlist(json: any[]): Faculty[] {
+        return json.map(item => Faculty.fromJSON(item));
+    }
 }

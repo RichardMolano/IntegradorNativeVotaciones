@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from "../../util/conexion/conexion";
 // Removed: import { Role } from 'react-native';
 
 export class RoleController implements interfaceMVCRole {
-    async createRole(role: Role): Promise<Role> {
+    async createRole(role: Role,token: string): Promise<Role> {
         try {
             const response = await axios.post(API_ENDPOINTS.ROLE_CREATE, role);
             return response.data as Role;
@@ -15,7 +15,7 @@ export class RoleController implements interfaceMVCRole {
         }
     }
 
-    async getRoleById(id: number): Promise<Role | null> {
+    async getRoleById(id: number,token: string): Promise<Role | null> {
         try {
             const response = await axios.get(`${API_ENDPOINTS.ROLE_FIND}/${id}`);
             return response.data as Role;
@@ -27,7 +27,7 @@ export class RoleController implements interfaceMVCRole {
         }
     }
 
-    async updateRole(role: Role): Promise<Role> {
+    async updateRole(role: Role,token: string): Promise<Role> {
         try {
             const response = await axios.put(`${API_ENDPOINTS.ROLE_UPDATE}/${role.id}`, role);
             return response.data as Role;
@@ -36,7 +36,7 @@ export class RoleController implements interfaceMVCRole {
         }
     }
 
-    async deleteRole(id: number): Promise<void> {
+    async deleteRole(id: number ,token: string): Promise<void> {
         try {
             await axios.delete(`${API_ENDPOINTS.ROLE_DELETE}/${id}`);
         } catch (error) {
@@ -44,9 +44,8 @@ export class RoleController implements interfaceMVCRole {
         }
     }
 
-    async getAllRoles(): Promise<Role[]> {
+    async getAllRoles(token: string): Promise<Role[]> {
         try {
-            const token = localStorage.getItem("TOKEN");
             const response = await axios.get(API_ENDPOINTS.ROLE_LIST, {
                 headers: {
                     Authorization: `Bearer ${token}`,

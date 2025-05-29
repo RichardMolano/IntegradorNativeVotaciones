@@ -2,13 +2,17 @@ import axios from "axios";
 import { interfaceMVC } from "../../models/interfaceMVC";
 import { User } from "../../models/user/user";
 import { API_ENDPOINTS } from "../../util/conexion/conexion";
+import * as Crypto from "expo-crypto";
+import {useContext} from "react";
+import {SeguridadContext} from "../../asyncData/Context";
+
 
 
 
 export class UserController implements interfaceMVC {
-    async createUser(user: User): Promise<User> {
+
+    async createUser(user: User ,token: string): Promise<User> {
         try {
-            const token = localStorage.getItem("TOKEN");
             user.password = await hashPasswordSHA512(user.password);
             const response = await axios.post(API_ENDPOINTS.USER_CREATE, user, {
                 headers: {
@@ -21,9 +25,8 @@ export class UserController implements interfaceMVC {
             throw error;
         }
     }
-    async getUserById(id: number): Promise<User | null> {
+    async getUserById(id: number,token: string): Promise<User | null> {
         try {
-            const token = localStorage.getItem("TOKEN");
             const response = await axios.get(`${API_ENDPOINTS.USER_LIST}/${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -35,9 +38,8 @@ export class UserController implements interfaceMVC {
             throw error;
         }
     }
-    async updateUser(user: User): Promise<User> {
+    async updateUser(user: User,token: string): Promise<User> {
         try {
-            const token = localStorage.getItem("TOKEN");
             user.password = await hashPasswordSHA512(user.password);
             const response = await axios.put(`${API_ENDPOINTS.USER_UPDATE}/${user.id}`, user, {
                 headers: {
@@ -50,9 +52,8 @@ export class UserController implements interfaceMVC {
             throw error;
         }
     }
-    async deleteUser(id: number): Promise<void> {
+    async deleteUser(id: number,token: string): Promise<void> {
         try {
-            const token = localStorage.getItem("TOKEN");
             await axios.delete(`${API_ENDPOINTS.USER_DELETE}/${id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -63,9 +64,9 @@ export class UserController implements interfaceMVC {
             throw error;
         }
     }
-    async getAllUsers(): Promise<User[]> {
+    async getAllUsers(token: string): Promise<User[]> {
         try {
-        const token = localStorage.getItem("TOKEN"); // replace with your method to get the token
+
         const response = await axios.get(API_ENDPOINTS.USER_LIST, {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -83,11 +84,10 @@ export class UserController implements interfaceMVC {
 
 }
 export const hashPasswordSHA512 = async (password: string): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-512', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashedPassword = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const hashedPassword = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA512,
+        password
+    );
     console.log('Contraseña hasheada SHA-512:', hashedPassword);
     return hashedPassword;
 };

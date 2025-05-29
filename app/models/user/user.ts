@@ -1,3 +1,4 @@
+import { Faculty } from './../faculty/faculty';
 import { Student } from '../student/student';
 import { Candidates } from "../candidates/candidates";
 import { Votes } from "../vote/vote";
@@ -11,7 +12,7 @@ export class User {
     public email: string;
     public password: string;
     public id_role: number;
-    public roleUser: Role
+    public roleUser: Role;
 
     constructor(id: number, name: string, document: string, email: string, password: string, id_role: number, role: Role) {
         this.id = id;

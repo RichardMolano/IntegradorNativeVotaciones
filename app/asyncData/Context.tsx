@@ -89,6 +89,13 @@ export const SeguridadProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       const decoded: any = jwtDecode(tokenGuardado);
+      const currentTime = Date.now() / 1000;
+      if (decoded.exp && decoded.exp < currentTime) {
+        console.log("Token expirado");
+        await AsyncStorage.removeItem(STORAGE_KEY);
+        setIsAuthenticated(false);
+        return false;
+      }
       const nuevaSesion: DatoSesion = {
         id: decoded.id,
         name: decoded.name,
@@ -98,6 +105,7 @@ export const SeguridadProvider = ({ children }: { children: ReactNode }) => {
         id_role: decoded.id_role,
         roleUser: new Role(decoded.role.id, decoded.role.name),
       };
+
       setToken(tokenGuardado);
       setSesion(nuevaSesion);
       setIsAuthenticated(true);

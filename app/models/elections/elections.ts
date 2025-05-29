@@ -19,4 +19,17 @@ export class Elections {
         this.end_date = end_date;
         this.state = state;
     }
+
+    static fromJSON(json: any): Elections {
+        return new Elections(
+            json.id,
+            json.name,
+            json.codeJoin,
+            new Date(json.start_date),
+            new Date(json.end_date),
+            json.state,
+            Candidates.fromJSONlist(json.candidatesElections || []),
+            Votes.fromJSONlist(json.votesElections || [])
+        );
+    }
 }

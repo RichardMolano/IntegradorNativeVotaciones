@@ -1,74 +1,221 @@
-import React from "react";
-import { View, StyleSheet, Dimensions, ScrollView } from "react-native";
-import { Text, Card } from "react-native-paper";
-import { LineChart, ProgressChart } from "react-native-chart-kit";
+import React, { useContext, useEffect, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  ScrollView,
+  Platform,
+} from "react-native";
+import { Text, Card, Avatar, Button } from "react-native-paper";
 import { colors } from "../../constants/colors";
-
-// Datos de los resultados de votación
-const votingResults = [
-  { id: "3", name: "Laura Mendoza", votes: 150 },
-  { id: "1", name: "Ana Torres", votes: 120 },
-  { id: "2", name: "Carlos Gómez", votes: 85 },
-].sort((a, b) => a.votes - b.votes);
-
-// Datos para la gráfica
-const chartConfig = {
-  backgroundColor: "#bb86fc",
-  backgroundGradientFrom: "#1e1e1e",
-  backgroundGradientTo: "#1e1e1e",
-  decimalPlaces: 2, // optional, defaults to 2dp
-  color: (opacity = 2) => `rgba(255, 255, 255, ${opacity})`,
-  labelColor: (opacity = 0) => `rgba(255, 255, 255, ${opacity})`,
-  style: {
-    borderRadius: 16,
-  },
-  propsForLabels: {
-    fontSize: "12",
-    fontWeight: "bold",
-  },
-};
+import FabMenuNavigator from "./hooks/fabMenuNavegator";
+import NavBar from "./hooks/NavBar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ElectionController } from "../controllers/private/electionController";
+import { SeguridadContext } from "../asyncData/Context";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import jsPDF from "jspdf"; // Solo para web
 
 const screenWidth = Dimensions.get("window").width - 32;
 
 export default function VotingResultsPanel() {
-  // Total de votos para calcular el progreso
-  const totalVotes = votingResults.reduce((sum, c) => sum + c.votes, 0);
+  const insets = useSafeAreaInsets();
+  const [results, setResults] = useState<any[]>([]);
+  const controller = new ElectionController();
+  const { token, sesion } = useContext(SeguridadContext);
 
-  // Crear el array de datos para la gráfica
-  const data = {
-    data: votingResults.map((c) => c.votes / totalVotes),
+  useEffect(() => {
+    controller.getResultsByElections(sesion.id, token).then((data) => {
+      setResults(data);
+    });
+  }, []);
+
+  // Función para contar votos por candidato
+  const getVotesCount = (election: any) => {
+    const counts: { [candidateId: number]: number } = {};
+    (election.candidates || []).forEach((c: any) => {
+      counts[c.id] = 0;
+    });
+    (election.votes || []).forEach((v: any) => {
+      if (v.id_candidate !== null && counts[v.id_candidate] !== undefined) {
+        counts[v.id_candidate]++;
+      }
+    });
+    return counts;
+  };
+
+  // Genera y comparte el PDF de UNA elección
+  const exportElectionToPDF = async (
+    election: any,
+    votesCount: any,
+    winnerId: number | null
+  ) => {
+    const htmlContent = `
+      <h1>Resultados de la elección: ${election.name || "Sin nombre"}</h1>
+      <p><strong>Código:</strong> ${election.codeJoin || "No disponible"}</p>
+      <p><strong>Fecha:</strong> ${election.start_date} - ${
+      election.end_date
+    }</p>
+      <p><strong>Estado:</strong> ${
+        election.state ? "Activa" : "Finalizada"
+      }</p>
+      <h3>Resultados:</h3>
+      <ul>
+        ${(election.candidates || [])
+          .map((c: any) => {
+            const user = c.id_user?.userStudent;
+            const votos = votesCount[c.id] || 0;
+            const isWinner = c.id === winnerId && votos > 0;
+            return `<li>
+              <b>${user?.name || "Candidato"}</b>: ${votos} votos
+              ${isWinner ? " 🏆" : ""}
+            </li>`;
+          })
+          .join("")}
+      </ul>
+    `;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      if (Platform.OS === "web") {
+        window.open(uri, "_blank");
+      } else if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        alert("No se pudo compartir el PDF.");
+      }
+    } catch (e) {
+      alert("Error al generar o compartir el PDF");
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Resultados de Votación</Text>
+    <View
+      style={[
+        styles.container,
+        { flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+        <Text style={styles.title}>Resultados de Votación</Text>
+        {results.length === 0 ? (
+          <Text style={{ color: "#ccc", marginTop: 16 }}>
+            No hay resultados para mostrar.
+          </Text>
+        ) : (
+          results.map((election) => {
+            const votesCount = getVotesCount(election);
+            // Encuentra el candidato con más votos
+            let maxVotes = 0;
+            let winnerId: number | null = null;
+            Object.entries(votesCount).forEach(([cid, count]) => {
+              if (count > maxVotes) {
+                maxVotes = count as number;
+                winnerId = Number(cid);
+              }
+            });
 
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text style={styles.subtitle}>Total de votos: {totalVotes}</Text>
-        </Card.Content>
-      </Card>
-
-      {/* Gráfica de progreso en una Card */}
-
-      <ProgressChart
-        data={data}
-        width={screenWidth}
-        height={220}
-        strokeWidth={16}
-        radius={32}
-        chartConfig={chartConfig}
-        hideLegend={true}
-        style={styles.chart}
-      />
-
-      {/* Mostrar resultados individuales de cada candidato */}
-      {votingResults.map((c) => (
-        <Card key={c.id} style={styles.card}>
-          <Card.Title title={c.name} subtitle={`Votos: ${c.votes}`} />
-        </Card>
-      ))}
-    </ScrollView>
+            return (
+              <Card key={election.id} style={styles.electionCard}>
+                <Card.Content>
+                  <Button
+                    icon="file-pdf-box"
+                    mode="contained"
+                    style={{
+                      marginBottom: 8,
+                      alignSelf: "flex-end",
+                      backgroundColor: "#bb86fc",
+                    }}
+                    onPress={() =>
+                      exportElectionToPDF(election, votesCount, winnerId)
+                    }
+                  >
+                    Generar PDF
+                  </Button>
+                  <Text style={styles.electionName}>
+                    {election.name || "Sin nombre"}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Código: </Text>
+                    {election.codeJoin || "No disponible"}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Fecha: </Text>
+                    {election.start_date} - {election.end_date}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Estado: </Text>
+                    {election.state ? "Activa" : "Finalizada"}
+                  </Text>
+                  <Text style={[styles.bold, { marginTop: 10 }]}>
+                    Resultados:
+                  </Text>
+                  {(election.candidates || []).length === 0 ? (
+                    <Text style={{ color: "#ccc", marginTop: 8 }}>
+                      No hay candidatos registrados.
+                    </Text>
+                  ) : (
+                    election.candidates.map((c: any) => {
+                      const user = c.id_user?.userStudent;
+                      const votos = votesCount[c.id] || 0;
+                      const isWinner = c.id === winnerId && votos > 0;
+                      return (
+                        <View
+                          key={c.id}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginVertical: 4,
+                            backgroundColor: "#232323",
+                            borderRadius: 8,
+                            padding: 8,
+                          }}
+                        >
+                          <Avatar.Text
+                            size={32}
+                            label={user?.name?.[0]?.toUpperCase() || "?"}
+                            style={{
+                              backgroundColor: isWinner ? "#ffd700" : "#bb86fc",
+                              marginRight: 10,
+                            }}
+                            color={isWinner ? "#232323" : "#fff"}
+                          />
+                          <Text
+                            style={{ color: "#fff", fontSize: 16, flex: 1 }}
+                          >
+                            {user?.name || "Candidato"}
+                          </Text>
+                          <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                            {votos} votos
+                          </Text>
+                          {isWinner && (
+                            <Avatar.Icon
+                              size={32}
+                              icon="crown"
+                              style={{
+                                backgroundColor: "#ffd700",
+                                marginLeft: 10,
+                              }}
+                              color="#232323"
+                            />
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+                </Card.Content>
+              </Card>
+            );
+          })
+        )}
+      </ScrollView>
+      {Platform.OS === "web" ? (
+        <NavBar visible={true} />
+      ) : (
+        <FabMenuNavigator visible={true} />
+      )}
+    </View>
   );
 }
 
@@ -79,24 +226,40 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: 22,
     color: colors.text || "#fff",
+    fontSize: 22,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
-    color: "#fff",
+    color: colors.text || "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
     textAlign: "center",
   },
-  chart: {
-    marginVertical: 16,
-    borderRadius: 12,
-    backgroundColor: "#0000",
-  },
-  card: {
+  electionCard: {
     backgroundColor: "#1e1e1e",
-    marginBottom: 16,
+    marginBottom: 20,
+    borderRadius: 12,
+    padding: 8,
+  },
+  electionName: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  electionInfo: {
+    color: "#fff",
+    fontSize: 13,
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  bold: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

@@ -1,44 +1,82 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { View, StyleSheet, ScrollView, Platform } from "react-native";
+import { Text, Card, Button, RadioButton } from "react-native-paper";
 import { colors } from "../../constants/colors";
-import { FlatList, Image, StyleSheet, Text, View } from "react-native";
-import { Button, Card, useTheme } from "react-native-paper";
-import { TabActions, useNavigation } from "@react-navigation/native";
-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TouchableOpacity } from "react-native";
+import FabMenuNavigator from "./hooks/fabMenuNavegator";
+import NavBar from "./hooks/NavBar";
 import { SeguridadContext } from "../asyncData/Context";
-
-const candidates = [
-  {
-    id: "1",
-    name: "Ana Torres",
-    semester: "5° semestre",
-    image: "https://randomuser.me/api/portraits/women/45.jpg",
-  },
-  {
-    id: "2",
-    name: "Carlos Gómez",
-    semester: "6° semestre",
-    image: "https://randomuser.me/api/portraits/men/32.jpg",
-  },
-  {
-    id: "3",
-    name: "Laura Mendoza",
-    semester: "4° semestre",
-    image: "https://randomuser.me/api/portraits/women/68.jpg",
-  },
-];
+import { ElectionController } from "../controllers/private/electionController";
+import { VoteController } from "../controllers/private/voteController";
 
 export default function VotingPanel() {
-  const { cerrarSesion } = useContext(SeguridadContext);
   const insets = useSafeAreaInsets();
-  const theme = useTheme();
-  const navigation = useNavigation();
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const { cerrarSesion, sesion, token } = useContext(SeguridadContext);
 
-  const handleVote = (id: string) => {
-    setSelectedId(id);
+  const [elections, setElections] = useState<any[]>([]);
+  const [votes, setVotes] = useState<any[]>([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<{
+    [electionId: number]: number | null;
+  }>({});
+  const [saving, setSaving] = useState<{ [electionId: number]: boolean }>({});
+  const controllerVote = new VoteController();
+
+  // Función para cargar elecciones y votos
+  const fetchElections = () => {
+    controllerVote.getVoteByUser(sesion.id, token).then((data: any[]) => {
+      const electionsData = Array.isArray(data[0]) ? data[0] : data;
+      setElections(electionsData);
+      const initialSelected: { [electionId: number]: number | null } = {};
+      electionsData.forEach((vote) => {
+        if (vote.electionsVotes && vote.electionsVotes.id !== undefined) {
+          initialSelected[vote.electionsVotes.id] =
+            vote.id_candidate !== undefined && vote.id_candidate !== null
+              ? vote.id_candidate
+              : null;
+        }
+      });
+      setSelectedCandidates(initialSelected);
+    });
   };
+
+  useEffect(() => {
+    fetchElections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, sesion.id]);
+
+  const handleSelectCandidate = (electionId: number, candidateId: number) => {
+    setSelectedCandidates((prev) => ({
+      ...prev,
+      [electionId]: candidateId,
+    }));
+    console.log("Selected candidate:", candidateId);
+  };
+
+  // update: Asegúrate de que el método handleSaveVote sea asíncrono
+  const handleSaveVote = async (electionId: number, idVoto: number) => {
+    const candidateId = selectedCandidates[electionId];
+    if (candidateId === null || candidateId === undefined) {
+      alert("Debes seleccionar un candidato antes de votar.");
+      return;
+    }
+    setSaving((prev) => ({ ...prev, [electionId]: true }));
+    // Aquí deberías llamar a tu API para guardar el voto
+    try {
+      await controllerVote.getElectionVotesByMethod(
+        candidateId, // id candidato
+        idVoto, // id de voto
+        token
+      );
+      alert("¡Voto guardado para la elección " + electionId + "!");
+      fetchElections(); // <-- Vuelve a cargar la información después de votar
+    } catch (error) {
+      console.error("Error al guardar el voto:", error);
+    } finally {
+      setSaving((prev) => ({ ...prev, [electionId]: false }));
+    }
+  };
+
+  console.log("Elections en render:", elections);
 
   return (
     <View
@@ -47,64 +85,129 @@ export default function VotingPanel() {
         { paddingTop: insets.top, paddingBottom: insets.bottom },
       ]}
     >
-      <View style={styles.container}>
-        <Text style={styles.title}>Panel de Votación</Text>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          {candidates.map((item) => {
-            const isSelected = selectedId === item.id;
-            return (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => handleVote(item.id)}
-                activeOpacity={1}
-              >
-                <Card
-                  style={[
-                    styles.card,
-                    isSelected && {
-                      borderColor: theme.colors.primary,
-                      borderWidth: 2,
-                    },
-                  ]}
-                >
-                  <Image source={{ uri: item.image }} style={styles.avatar} />
-                  <View style={styles.info}>
-                    <Text style={styles.Textinf}>{item.name}</Text>
-                    <Text style={styles.Textinf}>{item.semester}</Text>
-                    <View style={{ height: 30 }}></View>
-                  </View>
+      <Text style={styles.title}>Panel de Votación</Text>
+      <ScrollView
+        style={{ width: "100%" }}
+        contentContainerStyle={{ alignItems: "center" }}
+      >
+        {elections.length === 0 ? (
+          <Text style={{ color: "#ccc", marginTop: 16 }}>
+            No tienes elecciones disponibles para votar.
+          </Text>
+        ) : (
+          elections.map((vote) => {
+            if (!vote.electionsVotes) {
+              return (
+                <Card key={vote.id} style={styles.card}>
+                  <Card.Content>
+                    <Text style={styles.electionName}>
+                      Elección no disponible
+                    </Text>
+                  </Card.Content>
                 </Card>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+              );
+            }
+            const elec = vote.electionsVotes;
+            const disponible = elec.state ? elec.state === true : false;
+            const yaVoto =
+              vote.id_candidate !== undefined && vote.id_candidate !== null;
 
-        <Button
-          mode="outlined"
-          onPress={() => cerrarSesion()}
-          style={styles.logoutButton}
-        >
-          Cerrar sesión
-        </Button>
-      </View>
+            return (
+              <Card
+                key={elec.id || vote.id}
+                style={[
+                  styles.card,
+                  disponible && { borderColor: "#00cc66", borderWidth: 2 },
+                ]}
+              >
+                <Card.Content>
+                  <Text style={styles.electionName}>
+                    {elec.name || "Sin nombre"}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Código de unión: </Text>
+                    {elec.codeJoin || "No disponible"}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Fecha inicio: </Text>
+                    {elec.start_date}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Fecha fin: </Text>
+                    {elec.end_date}
+                  </Text>
+                  <Text style={styles.electionInfo}>
+                    <Text style={styles.bold}>Estado: </Text>
+                    {disponible ? "Disponible" : "No disponible"}
+                  </Text>
+                  {elec.candidatesElections.length > 0 ? (
+                    <>
+                      <Text style={styles.bold}>Selecciona tu candidato:</Text>
+                      <RadioButton.Group
+                        onValueChange={(value) =>
+                          handleSelectCandidate(elec.id, Number(value))
+                        }
+                        value={
+                          selectedCandidates[elec.id] !== null &&
+                          selectedCandidates[elec.id] !== undefined
+                            ? String(selectedCandidates[elec.id])
+                            : ""
+                        }
+                      >
+                        {elec.candidatesElections.map((c) => (
+                          <RadioButton.Item
+                            key={c.id}
+                            label={`${c.userStudent.userStudent.name}`}
+                            value={String(c.id)}
+                            color="#00cc66"
+                            labelStyle={{ color: "#fff" }}
+                            style={{
+                              backgroundColor: "#232323",
+                              borderRadius: 8,
+                              marginVertical: 2,
+                            }}
+                            disabled={yaVoto}
+                          />
+                        ))}
+                      </RadioButton.Group>
+                      <Button
+                        mode="contained"
+                        style={styles.voteButton}
+                        disabled={
+                          !selectedCandidates[elec.id] ||
+                          saving[elec.id] ||
+                          yaVoto
+                        }
+                        loading={!!saving[elec.id]}
+                        onPress={() => {
+                          handleSaveVote(elec.id, vote.id);
+                        }}
+                      >
+                        {yaVoto ? "Voto registrado" : "Guardar voto"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Text style={{ color: "#ccc", marginTop: 8 }}>
+                      No hay candidatos registrados en esta elección.
+                    </Text>
+                  )}
+                </Card.Content>
+              </Card>
+            );
+          })
+        )}
+      </ScrollView>
+
+      {Platform.OS === "web" ? (
+        <NavBar visible={true} />
+      ) : (
+        <FabMenuNavigator visible={true} />
+      )}
     </View>
   );
 }
-const styles = StyleSheet.create({
-  Textinf: {
-    color: "#fff",
-    fontSize: 13,
-    textAlign: "center",
-    marginBottom: 8,
-  },
 
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background || "#121212",
@@ -118,23 +221,40 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   card: {
-    width: 120,
-    marginRight: 16,
+    width: 340,
     marginBottom: 16,
-    padding: 12,
+    padding: 16,
     backgroundColor: "#1e1e1e",
     borderRadius: 12,
     alignItems: "center",
+    borderColor: "#333",
+    borderWidth: 1,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 12,
-  },
-  info: {
-    alignItems: "center",
+  electionName: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
     marginBottom: 8,
+    textAlign: "center",
+  },
+  electionInfo: {
+    color: "#fff",
+    fontSize: 13,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  bold: {
+    fontWeight: "bold",
+    color: "#fff",
+    marginTop: 8,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  voteButton: {
+    marginTop: 12,
+    alignSelf: "center",
+    backgroundColor: "#00cc66",
+    borderRadius: 8,
   },
   logoutButton: {
     marginTop: 20,
